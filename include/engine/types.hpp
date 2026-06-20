@@ -5,7 +5,10 @@
 
 enum class Side : uint8_t { Yes, No };
 enum class Type : uint8_t { Limit, Ioc, Fok, PostOnly };
+
+// Note: Status supports Partial Fills
 enum class Status : uint8_t { Accepted, PartiallyFilled, Filled, Rejected, Cancelled, NotFound };
+
 enum class Kind : uint8_t { Submit, Cancel };
 
 struct Order {
