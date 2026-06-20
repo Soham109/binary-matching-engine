@@ -52,3 +52,13 @@ struct Result {
         && remaining == other.remaining;
     }
 };
+
+struct Level { 
+    int price; 
+    int qty; 
+};
+
+struct BookSnapshot { 
+    std::vector<Level> yes; 
+    std::vector<Level> no; 
+};

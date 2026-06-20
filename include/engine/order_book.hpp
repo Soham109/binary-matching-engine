@@ -8,6 +8,7 @@
 class OrderBook {
 public:
     Result execute(const Command& cmd);
+    BookSnapshot snapshot() const;
 
 private:
     struct Location {

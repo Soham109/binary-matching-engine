@@ -92,3 +92,22 @@ Result OrderBook::execute(const Command& cmd) {
         return Result{ Status::Cancelled, cmd.cancel_id, {}, 0 };
     }
 }
+
+BookSnapshot OrderBook::snapshot() const {
+    BookSnapshot snap;
+    for (int p= 99; p >= 1; --p) {
+        if (!yes_bids[p].empty()) {
+            int total = 0;
+            for (const Order& o : yes_bids[p]) total += o.qty;
+            snap.yes.push_back({ p, total });
+        }
+    }
+    for (int p = 99; p>= 1; --p) {
+        if (!no_bids[p].empty()) {
+            int total = 0;
+            for (const Order& o : no_bids[p]) total += o.qty;
+            snap.no.push_back({ p, total });
+        }
+    }
+    return snap;
+}
