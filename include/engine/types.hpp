@@ -59,9 +59,15 @@ struct Result {
 struct Level { 
     int price; 
     int qty; 
+    bool operator==(const Level& lvl) const { 
+        return price == lvl.price && qty == lvl.qty; 
+    }
 };
 
 struct BookSnapshot { 
     std::vector<Level> yes; 
     std::vector<Level> no; 
+    bool operator==(const BookSnapshot& bk) const {
+        return yes == bk.yes && no == bk.no;
+    }
 };
