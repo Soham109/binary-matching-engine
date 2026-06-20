@@ -36,7 +36,15 @@ Result OrderBook::execute(const Command& cmd) {
                 (matchAgainst == Side::Yes) ? yes_bids[bestP] : no_bids[bestP];
 
             while (order.qty > 0 && !level.empty()) {
-                Order& resting = level.front();     
+                Order& resting = level.front();
+
+                //self trade prevention
+                if (resting.owner == cmd.owner) {
+                    index.erase(resting.id); 
+                    level.pop_front();      
+                    continue;       
+                }
+
                 int tradeQty = std::min(order.qty, resting.qty);
 
                 Fill f;
