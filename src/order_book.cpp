@@ -11,6 +11,20 @@ int OrderBook::best_price(Side side) const {
     return 0;
 }
 
+// total quantity available to fill (for FOK)
+int OrderBook::availableToFill(const Order& order) const {
+    Side opp = (order.side == Side::Yes) ? Side::No : Side::Yes;
+    int total = 0;
+    for (int p = 99; p >= 1; --p) {
+        if (order.price + p < 100) break;          // this level (and all lower) don't cross
+        const std::list<Order>& level = (opp == Side::Yes) ? yes_bids[p] : no_bids[p];
+        for (const Order& o : level)
+            if (o.owner != order.owner) total += o.qty;
+    }
+    return total;
+}
+
+
 // main order processing function
 Result OrderBook::execute(const Command& cmd) {
     if (cmd.kind == Kind::Submit) {
@@ -37,6 +51,15 @@ Result OrderBook::execute(const Command& cmd) {
         // match side = opposite of order side
         Side matchAgainst = (order.side == Side::Yes) ? Side::No : Side::Yes;
         std::vector<Fill> fills;
+
+        if(order.type == Type::PostOnly && order.price + best_price(matchAgainst)>=100){
+            return Result{ Status::Cancelled, order.id, {}, order.qty };
+        }
+
+        if(order.type == Type::Fok && availableToFill(order)<order.qty) {
+            return Result { Status::Cancelled, order.id, {}, order.qty };
+        }
+
 
         // 3. match against the opposite side, best price first
 
@@ -97,7 +120,7 @@ Result OrderBook::execute(const Command& cmd) {
         }
 
         // if order is not satisfied fully, add it to the order book
-        if (order.qty > 0) {
+        if (order.qty > 0 && (order.type==Type::Limit || order.type == Type::PostOnly)) {
             if (order.side == Side::Yes) {
 
                 // list.insert(list.end(), order) -> equivalent to push_back, but returns iterator.
@@ -110,9 +133,11 @@ Result OrderBook::execute(const Command& cmd) {
             }
         }
 
-        Status status = (order.qty == 0) ? Status::Filled
-                      : (!fills.empty()) ? Status::PartiallyFilled
-                      : Status::Accepted;
+        Status status;
+        if(order.qty == 0) status = Status::Filled;
+        else if(!fills.empty()) status = Status::PartiallyFilled;
+        else if(order.type == Type::Ioc) status = Status::Cancelled;
+        else status = Status::Accepted;
         return Result{ status, order.id, fills, order.qty };
 
     } else {

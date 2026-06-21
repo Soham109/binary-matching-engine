@@ -51,16 +51,43 @@ int main() {
 
     //POST query (Command)
     server.Post("/orders", [&](const httplib::Request& req, httplib::Response& res){
-        nlohmann::json body = nlohmann::json::parse(req.body);
+        nlohmann::json body;
+
+        try {
+            body = nlohmann::json::parse(req.body);
+        }
+        catch (const std::exception&) {
+            res.status = 400;
+            res.set_content(R"({"error":"invalid JSON"})", "application/json");
+            return;
+        }
 
         Command cmd{};
         cmd.kind = Kind::Submit;
-        cmd.type = Type::Limit;
-        cmd.price = body.value("price", 0); // 0 is a fallback (same with other 2 below)
-        cmd.qty = body.value("qty", 0);
-        cmd.owner = body.value("owner", 0);
-        std::string side = body.value("side", std::string("yes"));
-        cmd.side = (side == "no") ? Side::No : Side::Yes;
+        try {
+
+            nlohmann::json body = nlohmann::json::parse(req.body);
+
+            std::string type = body.value("type", std::string("limit"));
+            if (type == "ioc") cmd.type = Type::Ioc;
+            else if (type == "fok") cmd.type = Type::Fok;
+            else if (type == "postonly") cmd.type = Type::PostOnly;
+            else cmd.type = Type::Limit;
+
+            cmd.price = body.value("price", 0);
+            cmd.qty = body.value("qty", 0);
+            cmd.owner = body.value("owner", 0);
+            std::string side = body.value("side", std::string("yes"));
+            cmd.side = (side == "no") ? Side::No : Side::Yes;
+
+        } 
+        
+        catch (const std::exception&) {
+
+            res.status = 400;
+            res.set_content(R"({"error":"invalid request"})", "application/json");
+            return;
+        };
 
         Result r;
         {

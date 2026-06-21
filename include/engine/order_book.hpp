@@ -23,5 +23,6 @@ private:
     uint64_t next_id=1; 
     
     int best_price(Side side) const; //helper for finding the best avl price
+    int availableToFill(const Order& order) const; //helper for FOK
 };
 

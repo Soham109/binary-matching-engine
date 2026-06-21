@@ -23,3 +23,5 @@ target_include_directories(engine PUBLIC include/engine)
 
 add_executable(server src/server.cpp)
 target_link_libraries(server PRIVATE engine httplib::httplib nlohmann_json::nlohmann_json)
+add_executable(fuzz fuzz.cpp)
+target_link_libraries(fuzz PRIVATE engine)
