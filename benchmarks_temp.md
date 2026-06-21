@@ -53,7 +53,16 @@ Workload: N=2,000,000, seed 99, ~1.80M submits / 0.20M cancels, all 4 TIF types.
 | Version | throughput (clean) | p50 | p90 | p99 | p99.9 | max | vs v0 |
 |--------:|-------------------:|----:|----:|----:|------:|----:|------:|
 | v0 (array+list) | 793.9 ns/op · 1.26 M/s | 42 ns | 167 ns | ~20.3 µs | ~123 µs | 0.44–1.9 ms | 1.00× |
-| v1 (pool+bitmask) | 765.1 ns/op · 1.31 M/s | 42 ns | ~150 ns | ~20.0 µs | ~120 µs | 0.41–0.46 ms | **1.04×** |
+| v1 (pool+bitmask) | 765.1 ns/op · 1.31 M/s | 42 ns | ~150 ns | ~20.0 µs | ~120 µs | 0.41–0.46 ms | 1.04× |
+| v2 (+ FOK early-exit) | **58.6 ns/op · 17.06 M/s** | 42 ns | 125 ns | **292 ns** | ~0.8–3.3 µs | ~0.41 ms | **13.5×** |
+
+### v2 raw runs
+```
+throughput 59.5716 ns/op  16.7865 M/s   p99=292ns  p99.9=3250ns  max=415375ns
+throughput 58.6116 ns/op  17.0615 M/s   p99=292ns  p99.9=792ns   max=419084ns
+throughput 60.5589 ns/op  16.5128 M/s   p99=292ns  p99.9=2375ns  max=407333ns
+```
+Fuzzer clean under ASan/UBSan; outcome counts + `sink` identical to v0/v1 (behavior unchanged).
 
 (Latency includes per-op timer overhead; `max` is a single worst sample and is noisy run-to-run.
 `p99`/`p99.9` are stable. Use latency for tail *shape* / relative comparison, throughput for true cost.)
@@ -76,6 +85,18 @@ trades count=666051  matchedVol=3867171   sink=60112548
 - **Revealed next target:** `availableToFill` for FOK. Options: maintain a running per-level qty
   sum (turns the scan into O(levels), not O(orders)); the STP own-owner exclusion is the wrinkle
   to handle.
+
+### v2 — the payoff (one-line FOK early-exit)
+A single line in `availableToFill` — `if (total >= order.qty) return total;` — stops the scan
+as soon as enough crossing liquidity is found (the caller only needs `total ≥ qty`).
+- **Throughput: 765 → 58.6 ns/op (~13×) on the comprehensive workload** — far more than the
+  entire pool+bitmask refactor bought here (~4%).
+- **Tail crushed: p99 ≈ 20 µs → 292 ns (~70×).** Most FOKs now exit after a few orders; only
+  *unfillable* FOKs still scan the full crossing book.
+- **Lesson:** the highest-leverage fix was one line, found by a comprehensive benchmark — not the
+  big refactor. Caveat: the magnitude is workload-specific (this bench is FOK-heavy on a deep
+  book); the early-exit is *never worse*, but its payoff scales with how much FOK scanning the
+  workload does.
 
 ## How to record a new version
 

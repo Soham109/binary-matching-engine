@@ -172,6 +172,7 @@ int OrderBook::availableToFill(const Order& order) const {
             if (resting.owner != order.owner) {
                 total += resting.qty;
             }
+            if (total >= order.qty) return total;
         }
     }
 
