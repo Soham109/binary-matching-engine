@@ -23,11 +23,11 @@ the baseline book to the current implementation.
 
 ## Core market rule
 
-A YES bid at \(p_y\) and a NO bid at \(p_n\) can trade when:
+A YES bid at $p_y$ and a NO bid at $p_n$ can trade when:
 
-\[
+$$
 p_y + p_n \ge 100
-\]
+$$
 
 The resting order receives its posted price; the incoming order receives the
 complementary leg and keeps any price improvement.
